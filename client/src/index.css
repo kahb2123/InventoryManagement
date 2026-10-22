@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* Amharic glyphs need a font with full Ethiopic coverage */
+  :lang(am) {
+    font-family: 'Noto Sans Ethiopic', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-300 rounded-full border-2 border-solid border-transparent bg-clip-content;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-400;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white border border-line rounded-xl shadow-card;
+  }
+
+  .field-label {
+    @apply block text-[13px] font-medium text-ink mb-1.5;
+  }
+
+  .field-hint {
+    @apply text-xs text-ink-muted mt-1;
+  }
+
+  .input {
+    @apply w-full h-10 px-3 text-sm bg-white border border-line rounded-lg text-ink placeholder:text-ink-faint
+           transition focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100
+           disabled:bg-ink-50 disabled:text-ink-faint disabled:cursor-not-allowed;
+  }
+
+  .input-error {
+    @apply border-danger-500 focus:border-danger-500 focus:ring-danger-500/15;
+  }
+
+  .table-head {
+    @apply px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-ink-muted bg-ink-50/80;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 text-sm text-ink border-t border-line align-middle;
+  }
+
+  .link {
+    @apply text-brand-600 hover:text-brand-700 hover:underline underline-offset-2;
+  }
+
+  .scroll-x {
+    @apply overflow-x-auto;
+  }
+}
+
+/* ------------------------------------------------------------------ print */
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}
+
+.print-only {
+  display: none;
+}
