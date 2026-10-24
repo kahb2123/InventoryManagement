@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const PURCHASE_STATUSES = ['ordered', 'partially_received', 'received', 'cancelled'];
 
@@ -20,7 +21,8 @@ const purchaseItemSchema = new mongoose.Schema(
 
 const purchaseSchema = new mongoose.Schema(
   {
-    purchaseNumber: { type: String, required: true, unique: true },
+    purchaseNumber: { type: String, required: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
     supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true, index: true },
     supplierName: { type: String, default: '' },
@@ -46,7 +48,11 @@ const purchaseSchema = new mongoose.Schema(
 );
 
 purchaseSchema.index({ orderedDate: -1 });
-purchaseSchema.index({ clientKey: 1 }, { unique: true, partialFilterExpression: { clientKey: { $type: 'string' } } });
+purchaseSchema.index({ tenantId: 1, orderedDate: -1 });
+purchaseSchema.index({ tenantId: 1, clientKey: 1 }, { unique: true, partialFilterExpression: { clientKey: { $type: 'string' } } });
+
+tenantScope(purchaseSchema);
 
 export const Purchase = mongoose.model('Purchase', purchaseSchema);
 export default Purchase;
+

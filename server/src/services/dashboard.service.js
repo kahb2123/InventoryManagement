@@ -13,15 +13,16 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 const ACTIVE_SALE_STATUSES = ['completed', 'partial_return'];
 
-export async function buildDashboard({ days = 7, branch = null, from, to } = {}) {
+export async function buildDashboard({ days = 7, branch = null, from, to, tenantId } = {}) {
   const settings = await getSettings();
   const tz = settings.timezone || 'Africa/Addis_Ababa';
   const today = dayRange(new Date(), tz);
   const period = from || to ? parseDateFilter(from, to, days) : rangeForDays(days, tz);
+  const tenantFilter = { tenantId };
   const branchFilter = branch && branch !== 'all' ? { branch } : {};
 
-  const saleFilter = { ...branchFilter, date: period, status: { $in: ACTIVE_SALE_STATUSES } };
-  const purchaseFilter = { ...branchFilter, orderedDate: period, status: { $ne: 'cancelled' } };
+  const saleFilter = { ...tenantFilter, ...branchFilter, date: period, status: { $in: ACTIVE_SALE_STATUSES } };
+  const purchaseFilter = { ...tenantFilter, ...branchFilter, orderedDate: period, status: { $ne: 'cancelled' } };
 
   const [
     productCount,
@@ -51,7 +52,7 @@ export async function buildDashboard({ days = 7, branch = null, from, to } = {})
     supplierDebtAgg,
   ] = await Promise.all([
     Product.countDocuments({ active: true }),
-    Product.aggregate([{ $group: { _id: null, quantity: { $sum: '$totalStock' }, value: { $sum: '$totalStockValue' } } }]),
+    Product.aggregate([{ $match: { tenantId } }, { $group: { _id: null, quantity: { $sum: '$totalStock' }, value: { $sum: '$totalStockValue' } } }]),
 
     Sale.aggregate([{ $match: { ...branchFilter, date: today, status: { $in: ACTIVE_SALE_STATUSES } } }, { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } }]),
     Purchase.aggregate([{ $match: { ...branchFilter, orderedDate: today, status: { $ne: 'cancelled' } } }, { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } }]),
@@ -61,10 +62,10 @@ export async function buildDashboard({ days = 7, branch = null, from, to } = {})
     Sale.aggregate([{ $match: saleFilter }, { $group: { _id: null, profit: { $sum: '$grossProfit' } } }]),
     Sale.aggregate([{ $match: { ...branchFilter, date: today, status: { $in: ACTIVE_SALE_STATUSES } } }, { $group: { _id: null, profit: { $sum: '$grossProfit' } } }]),
 
-    Sale.aggregate([{ $match: { status: { $in: ACTIVE_SALE_STATUSES } } }, { $group: { _id: null, balance: { $sum: '$balance' } } }]),
-    Payment.aggregate([{ $match: { type: 'customer_receipt' } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]),
-    Purchase.aggregate([{ $match: { status: { $ne: 'cancelled' } } }, { $group: { _id: null, balance: { $sum: '$balance' } } }]),
-    Payment.aggregate([{ $match: { type: 'supplier_payment' } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]),
+    Sale.aggregate([{ $match: { ...tenantFilter, status: { $in: ACTIVE_SALE_STATUSES } } }, { $group: { _id: null, balance: { $sum: '$balance' } } }]),
+    Payment.aggregate([{ $match: { ...tenantFilter, type: 'customer_receipt' } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]),
+    Purchase.aggregate([{ $match: { ...tenantFilter, status: { $ne: 'cancelled' } } }, { $group: { _id: null, balance: { $sum: '$balance' } } }]),
+    Payment.aggregate([{ $match: { ...tenantFilter, type: 'supplier_payment' } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]),
 
     Product.countDocuments({ active: true, minStock: { $gt: 0 }, $expr: { $lte: ['$totalStock', '$minStock'] } }),
     Product.countDocuments({ active: true, totalStock: { $lte: 0 } }),
@@ -109,7 +110,7 @@ export async function buildDashboard({ days = 7, branch = null, from, to } = {})
       { $limit: 8 },
     ]),
     Product.aggregate([
-      { $match: { active: true } },
+      { $match: { ...tenantFilter, active: true } },
       { $group: { _id: '$category', value: { $sum: '$totalStockValue' }, quantity: { $sum: '$totalStock' } } },
       { $sort: { value: -1 } },
     ]),
@@ -143,9 +144,9 @@ export async function buildDashboard({ days = 7, branch = null, from, to } = {})
       .populate('category', 'name')
       .populate('preferredSupplier', 'name phone')
       .lean(),
-    Expense.aggregate([{ $match: { date: period } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]),
+    Expense.aggregate([{ $match: { ...tenantFilter, date: period } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]),
     Sale.aggregate([
-      { $match: { status: { $in: ACTIVE_SALE_STATUSES } } },
+      { $match: { ...tenantFilter, status: { $in: ACTIVE_SALE_STATUSES } } },
       { $group: { _id: '$customer', balance: { $sum: '$balance' } } },
       { $match: { balance: { $gt: 0 } } },
       { $sort: { balance: -1 } },
@@ -155,7 +156,7 @@ export async function buildDashboard({ days = 7, branch = null, from, to } = {})
       { $project: { balance: 1, name: { $ifNull: ['$customer.name', 'Walk-in Customer'] }, phone: '$customer.phone' } },
     ]),
     Purchase.aggregate([
-      { $match: { status: { $ne: 'cancelled' } } },
+      { $match: { ...tenantFilter, status: { $ne: 'cancelled' } } },
       { $group: { _id: '$supplier', balance: { $sum: '$balance' } } },
       { $match: { balance: { $gt: 0 } } },
       { $sort: { balance: -1 } },
@@ -231,21 +232,23 @@ export async function buildDashboard({ days = 7, branch = null, from, to } = {})
 }
 
 /** Branch comparison for multi-branch businesses. */
-export async function branchComparison({ from, to } = {}) {
+export async function branchComparison({ from, to, tenantId } = {}) {
   const settings = await getSettings();
   const tz = settings.timezone || 'Africa/Addis_Ababa';
   const period = from || to ? parseDateFilter(from, to, 30) : rangeForDays(30, tz);
+  const tenantFilter = { tenantId };
   const branches = await Branch.find({ active: true }).sort({ name: 1 }).lean();
 
   const sales = await Sale.aggregate([
-    { $match: { date: period, status: { $in: ACTIVE_SALE_STATUSES } } },
+    { $match: { ...tenantFilter, date: period, status: { $in: ACTIVE_SALE_STATUSES } } },
     { $group: { _id: '$branch', sales: { $sum: '$total' }, profit: { $sum: '$grossProfit' }, count: { $sum: 1 } } },
   ]);
   const purchases = await Purchase.aggregate([
-    { $match: { orderedDate: period, status: { $ne: 'cancelled' } } },
+    { $match: { ...tenantFilter, orderedDate: period, status: { $ne: 'cancelled' } } },
     { $group: { _id: '$branch', purchases: { $sum: '$total' }, count: { $sum: 1 } } },
   ]);
   const stock = await ProductStock.aggregate([
+    { $match: { ...tenantFilter } },
     { $group: { _id: '$branch', quantity: { $sum: '$quantity' }, value: { $sum: '$totalValue' } } },
   ]);
 

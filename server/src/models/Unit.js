@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const UNIT_TYPES = {
   COUNT: 'count',
@@ -38,9 +39,13 @@ const unitSchema = new mongoose.Schema(
     loadQuantity: { type: Number, default: null, min: 0 },
     active: { type: Boolean, default: true },
     system: { type: Boolean, default: false },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
   },
   { timestamps: true }
 );
 
+tenantScope(unitSchema);
+
 export const Unit = mongoose.model('Unit', unitSchema);
 export default Unit;
+

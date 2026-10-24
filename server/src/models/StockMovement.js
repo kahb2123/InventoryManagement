@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const MOVEMENT_TYPES = [
   'stock_in',
@@ -19,7 +20,8 @@ export const MOVEMENT_TYPES = [
 
 const stockMovementSchema = new mongoose.Schema(
   {
-    movementNumber: { type: String, required: true, unique: true },
+    movementNumber: { type: String, required: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
     type: { type: String, enum: MOVEMENT_TYPES, required: true, index: true },
@@ -50,8 +52,12 @@ const stockMovementSchema = new mongoose.Schema(
 );
 
 stockMovementSchema.index({ date: -1 });
-stockMovementSchema.index({ product: 1, date: -1 });
-stockMovementSchema.index({ transferGroup: 1 });
+stockMovementSchema.index({ tenantId: 1, date: -1 });
+stockMovementSchema.index({ tenantId: 1, product: 1, date: -1 });
+stockMovementSchema.index({ tenantId: 1, transferGroup: 1 });
+
+tenantScope(stockMovementSchema);
 
 export const StockMovement = mongoose.model('StockMovement', stockMovementSchema);
 export default StockMovement;
+

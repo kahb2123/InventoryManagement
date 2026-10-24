@@ -18,6 +18,7 @@ router.get(
     if (req.query.active !== undefined) filter.active = req.query.active === 'true';
     const branches = await Branch.find(filter).populate('manager', 'name').sort({ name: 1 }).lean();
     const stats = await ProductStock.aggregate([
+      { $match: { tenantId: req.tenantId } },
       { $group: { _id: '$branch', quantity: { $sum: '$quantity' }, value: { $sum: '$totalValue' } } },
     ]);
     const map = new Map(stats.map((s) => [String(s._id), s]));

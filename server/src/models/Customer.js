@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const CUSTOMER_CATEGORIES = ['retail', 'contractor', 'construction_company', 'wholesale', 'government', 'other'];
 
@@ -13,6 +14,7 @@ const customerSchema = new mongoose.Schema(
     city: { type: String, trim: true, default: '' },
     taxId: { type: String, trim: true, default: '' },
     category: { type: String, enum: CUSTOMER_CATEGORIES, default: 'retail' },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     creditLimit: { type: Number, default: 0, min: 0 },
     openingBalance: { type: Number, default: 0 },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
@@ -25,5 +27,8 @@ const customerSchema = new mongoose.Schema(
 customerSchema.index({ name: 1 });
 customerSchema.index({ phone: 1 });
 
+tenantScope(customerSchema);
+
 export const Customer = mongoose.model('Customer', customerSchema);
 export default Customer;
+

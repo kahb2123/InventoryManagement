@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const PAYMENT_TYPES = ['customer_receipt', 'supplier_payment'];
 export const PAYMENT_METHODS = ['cash', 'bank_transfer', 'mobile_money', 'cheque', 'credit_note', 'other'];
@@ -18,11 +19,15 @@ const paymentSchema = new mongoose.Schema(
     notes: { type: String, trim: true, default: '' },
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     recordedByName: { type: String, default: '' },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
   },
   { timestamps: true }
 );
 
 paymentSchema.index({ party: 1, date: -1 });
 
+tenantScope(paymentSchema);
+
 export const Payment = mongoose.model('Payment', paymentSchema);
 export default Payment;
+

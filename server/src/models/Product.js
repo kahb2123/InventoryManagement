@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 const productSchema = new mongoose.Schema(
   {
@@ -18,6 +19,7 @@ const productSchema = new mongoose.Schema(
     image: { type: String, trim: true, default: '' },
     taxRate: { type: Number, default: 0, min: 0 },
     taxable: { type: Boolean, default: false },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     active: { type: Boolean, default: true },
     description: { type: String, trim: true, default: '' },
     // Denormalised totals (authoritative source = ProductStock + StockMovement ledger)
@@ -28,7 +30,8 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ name: 'text', sku: 'text', barcode: 'text', brand: 'text' });
-productSchema.index({ category: 1, active: 1 });
+productSchema.index({ tenantId: 1, category: 1, active: 1 });
+productSchema.index({ tenantId: 1, sku: 1 }, { unique: true });
 productSchema.index({ totalStock: 1 });
 
 productSchema.virtual('stockStatus').get(function stockStatus() {
@@ -39,5 +42,8 @@ productSchema.virtual('stockStatus').get(function stockStatus() {
 
 productSchema.set('toJSON', { virtuals: true });
 
+tenantScope(productSchema);
+
 export const Product = mongoose.model('Product', productSchema);
 export default Product;
+

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 const supplierSchema = new mongoose.Schema(
   {
@@ -12,6 +13,7 @@ const supplierSchema = new mongoose.Schema(
     city: { type: String, trim: true, default: '' },
     taxId: { type: String, trim: true, default: '' },
     paymentTerms: { type: String, trim: true, default: '' },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     openingBalance: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
     notes: { type: String, trim: true, default: '' },
@@ -21,5 +23,8 @@ const supplierSchema = new mongoose.Schema(
 
 supplierSchema.index({ name: 1 });
 
+tenantScope(supplierSchema);
+
 export const Supplier = mongoose.model('Supplier', supplierSchema);
 export default Supplier;
+

@@ -27,7 +27,7 @@ router.get(
     if (req.query.active !== undefined) filter.active = req.query.active === 'true';
     const categories = await Category.find(filter).sort({ name: 1 });
     const counts = await Product.aggregate([
-      { $match: { category: { $in: categories.map((c) => c._id) } } },
+      { $match: { tenantId: req.tenantId, category: { $in: categories.map((c) => c._id) } } },
       { $group: { _id: '$category', productCount: { $sum: 1 }, stockValue: { $sum: '$totalStockValue' } } },
     ]);
     const map = new Map(counts.map((c) => [String(c._id), c]));
@@ -101,7 +101,10 @@ router.get(
     const filter = {};
     if (req.query.active !== undefined) filter.active = req.query.active === 'true';
     const units = await Unit.find(filter).sort({ name: 1 });
-    const usage = await Product.aggregate([{ $group: { _id: '$unit', count: { $sum: 1 } } }]);
+    const usage = await Product.aggregate([
+      { $match: { tenantId: req.tenantId } },
+      { $group: { _id: '$unit', count: { $sum: 1 } } },
+    ]);
     const map = new Map(usage.map((u) => [String(u._id), u.count]));
     res.json({
       success: true,

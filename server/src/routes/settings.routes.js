@@ -45,7 +45,7 @@ router.get(
   requireAuth,
   requirePermission('settings.view'),
   asyncHandler(async (req, res) => {
-    const settings = await getSettings({ fresh: true });
+    const settings = await getSettings({ fresh: true, tenantId: req.tenantId });
     const branches = await Branch.find({ active: true }).sort({ name: 1 }).lean();
     res.json({ success: true, data: { ...withAbsoluteLogo(req, settings), branches } });
   })
@@ -75,7 +75,7 @@ router.put(
     if (patch.defaultPaymentMethods && !Array.isArray(patch.defaultPaymentMethods)) {
       throw ApiError.badRequest('Payment methods must be a list', 'INVALID_PAYMENT_METHODS');
     }
-    const settings = await updateSettings(patch);
+    const settings = await updateSettings(patch, { tenantId: req.tenantId });
     await audit(req, { action: 'settings.updated', entity: 'Settings', entityLabel: settings.businessName, details: { fields: Object.keys(patch) } });
     res.json({ success: true, message: 'Settings saved', data: withAbsoluteLogo(req, settings) });
   })
@@ -88,7 +88,7 @@ router.post(
   upload.single('logo'),
   asyncHandler(async (req, res) => {
     if (!req.file) throw ApiError.badRequest('Choose an image to upload', 'NO_FILE');
-    const settings = await updateSettings({ logo: `/uploads/${req.file.filename}` });
+    const settings = await updateSettings({ logo: `/uploads/${req.file.filename}` }, { tenantId: req.tenantId });
     await audit(req, { action: 'settings.logo_updated', entity: 'Settings', entityLabel: settings.businessName });
     res.json({ success: true, message: 'Logo updated', data: { logo: absoluteMediaUrl(req, settings.logo) } });
   })

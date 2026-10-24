@@ -28,6 +28,7 @@ import usersRoutes from './routes/users.routes.js';
 import { notFound, errorHandler } from './middleware/error.js';
 import { uploadDir } from './middleware/upload.js';
 import { ApiError } from './utils/apiError.js';
+import { clearTenantContext } from './utils/tenantScope.js';
 
 export function createApp() {
   const app = express();
@@ -70,6 +71,16 @@ export function createApp() {
 
   app.get('/api/health', (req, res) => {
     res.json({ success: true, data: { status: 'ok', env: env.nodeEnv, time: new Date().toISOString() } });
+  });
+
+  // Reset tenant scoping context for every request so no request leaks
+  // the previous tenant's ID into the next one.
+  app.use((req, res, next) => {
+    clearTenantContext();
+    res.on('finish', () => {
+      clearTenantContext();
+    });
+    next();
   });
 
   app.use('/api/auth', authLimiter, authRoutes);

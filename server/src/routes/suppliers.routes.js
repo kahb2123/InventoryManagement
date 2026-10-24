@@ -34,7 +34,7 @@ router.get(
       Supplier.find(filter).sort({ name: 1 }).skip((pageNum - 1) * limitNum).limit(limitNum).lean(),
       Supplier.countDocuments(filter),
     ]);
-    const balances = await supplierBalances(suppliers.map((s) => s._id));
+    const balances = await supplierBalances(suppliers.map((s) => s._id), req.tenantId);
 
     res.json({
       success: true,
@@ -60,7 +60,7 @@ router.get(
     const supplier = await Supplier.findById(req.params.id).lean();
     if (!supplier) throw ApiError.notFound('Supplier not found');
     const [balance, purchases, payments] = await Promise.all([
-      supplierBalance(supplier._id),
+      supplierBalance(supplier._id, req.tenantId),
       Purchase.find({ supplier: supplier._id }).sort({ orderedDate: -1 }).limit(50).populate('branch', 'name code').lean(),
       Payment.find({ type: 'supplier_payment', party: supplier._id }).sort({ date: -1 }).limit(50).lean(),
     ]);
@@ -78,7 +78,7 @@ router.get(
     const [purchases, payments, balance] = await Promise.all([
       Purchase.find({ supplier: supplier._id, orderedDate: range, status: { $ne: 'cancelled' } }).sort({ orderedDate: 1 }).lean(),
       Payment.find({ type: 'supplier_payment', party: supplier._id, date: range }).sort({ date: 1 }).lean(),
-      supplierBalance(supplier._id),
+      supplierBalance(supplier._id, req.tenantId),
     ]);
 
     const lines = [

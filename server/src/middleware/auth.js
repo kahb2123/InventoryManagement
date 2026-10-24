@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import env from '../config/env.js';
 import { User } from '../models/User.js';
 import { ApiError, asyncHandler } from '../utils/apiError.js';
+import { setTenantContext } from '../utils/tenantScope.js';
 
 export async function authenticate(req, res, next) {
   const header = req.headers.authorization || '';
@@ -25,12 +26,14 @@ export async function authenticate(req, res, next) {
   req.user = user;
   req.userId = user._id;
   req.userRole = user.role;
+  req.tenantId = user.tenantId;
+  setTenantContext(user.tenantId);
   return next();
 }
 
 export function signToken(user) {
   return jwt.sign(
-    { sub: user._id.toString(), role: user.role, name: user.name },
+    { sub: user._id.toString(), role: user.role, name: user.name, tenantId: user.tenantId.toString() },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn }
   );

@@ -17,6 +17,7 @@ router.get(
       branch: req.query.branch,
       from: req.query.from,
       to: req.query.to,
+      tenantId: req.tenantId,
     });
     res.json({ success: true, data });
   })
@@ -26,7 +27,7 @@ router.get(
   '/branches',
   requirePermission('reports.view'),
   asyncHandler(async (req, res) => {
-    const data = await branchComparison({ from: req.query.from, to: req.query.to });
+    const data = await branchComparison({ from: req.query.from, to: req.query.to, tenantId: req.tenantId });
     res.json({ success: true, data });
   })
 );

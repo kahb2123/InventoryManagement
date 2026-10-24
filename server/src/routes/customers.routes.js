@@ -35,7 +35,7 @@ router.get(
       Customer.find(filter).sort({ name: 1 }).skip((pageNum - 1) * limitNum).limit(limitNum).lean(),
       Customer.countDocuments(filter),
     ]);
-    const balances = await customerBalances(customers.map((c) => c._id));
+    const balances = await customerBalances(customers.map((c) => c._id), req.tenantId);
 
     res.json({
       success: true,
@@ -70,7 +70,7 @@ router.get(
     const customer = await Customer.findById(req.params.id).lean();
     if (!customer) throw ApiError.notFound('Customer not found');
     const [balance, sales, payments] = await Promise.all([
-      customerBalance(customer._id),
+      customerBalance(customer._id, req.tenantId),
       Sale.find({ customer: customer._id }).sort({ date: -1 }).limit(50).populate('branch', 'name code').lean(),
       Payment.find({ type: 'customer_receipt', party: customer._id }).sort({ date: -1 }).limit(50).lean(),
     ]);
@@ -94,7 +94,7 @@ router.get(
         .populate('branch', 'name code')
         .lean(),
       Payment.find({ type: 'customer_receipt', party: customer._id, date: range }).sort({ date: 1 }).lean(),
-      customerBalance(customer._id),
+      customerBalance(customer._id, req.tenantId),
     ]);
 
     const lines = [

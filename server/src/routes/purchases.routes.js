@@ -44,7 +44,7 @@ router.get(
     ]);
 
     const summary = await Purchase.aggregate([
-      { $match: filter },
+      { $match: { ...filter, tenantId: req.tenantId } },
       { $group: { _id: null, total: { $sum: '$total' }, paid: { $sum: '$paidAmount' }, balance: { $sum: '$balance' }, count: { $sum: 1 } } },
     ]);
 

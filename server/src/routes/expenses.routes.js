@@ -46,11 +46,11 @@ router.get(
         .populate('employee', 'name')
         .lean(),
       Expense.countDocuments(filter),
-      Expense.aggregate([{ $match: filter }, { $group: { _id: null, amount: { $sum: '$amount' }, count: { $sum: 1 } } }]),
+      Expense.aggregate([{ $match: { ...filter, tenantId: req.tenantId } }, { $group: { _id: null, amount: { $sum: '$amount' }, count: { $sum: 1 } } }]),
     ]);
 
     const byCategory = await Expense.aggregate([
-      { $match: filter },
+      { $match: { ...filter, tenantId: req.tenantId } },
       { $group: { _id: '$category', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
       { $sort: { amount: -1 } },
     ]);

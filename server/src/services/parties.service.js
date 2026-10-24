@@ -8,25 +8,24 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
  * Customer position computed from saved records only:
  *   balance = opening balance + credit sales (sale.balance) - receipts received
  */
-export async function customerBalance(customerId) {
-  const [salesAgg, receiptAgg, cust] = await Promise.all([
+export async function customerBalance(customerId, tenantId) {
+  const tenantFilter = { tenantId };
+  const [salesAgg, receiptAgg] = await Promise.all([
     Sale.aggregate([
-      { $match: { customer: customerId, status: { $in: ['completed', 'partial_return'] } } },
+      { $match: { ...tenantFilter, customer: customerId, status: { $in: ['completed', 'partial_return'] } } },
       { $group: { _id: null, total: { $sum: '$total' }, paid: { $sum: '$paidAmount' }, balance: { $sum: '$balance' }, cogs: { $sum: '$costTotal' }, profit: { $sum: '$grossProfit' }, count: { $sum: 1 } } },
     ]),
     Payment.aggregate([
-      { $match: { type: 'customer_receipt', party: customerId } },
+      { $match: { ...tenantFilter, type: 'customer_receipt', party: customerId } },
       { $group: { _id: null, amount: { $sum: '$amount' }, count: { $sum: 1 } } },
     ]),
-    Payment.findOne({ type: 'customer_receipt', party: customerId }).lean(),
   ]);
 
   const sales = salesAgg[0] || { total: 0, paid: 0, balance: 0, cogs: 0, profit: 0, count: 0 };
   const receipts = receiptAgg[0] || { amount: 0, count: 0 };
-  const opening = cust ? 0 : 0;
 
   return {
-    openingBalance: opening,
+    openingBalance: 0,
     invoiceCount: sales.count,
     totalSales: round2(sales.total),
     totalPaid: round2(sales.paid),
@@ -43,14 +42,15 @@ export async function customerBalance(customerId) {
  * Supplier position computed from saved records only:
  *   balance = purchases (purchase.balance) - payments made
  */
-export async function supplierBalance(supplierId) {
+export async function supplierBalance(supplierId, tenantId) {
+  const tenantFilter = { tenantId };
   const [purchAgg, payAgg] = await Promise.all([
     Purchase.aggregate([
-      { $match: { supplier: supplierId, status: { $ne: 'cancelled' } } },
+      { $match: { ...tenantFilter, supplier: supplierId, status: { $ne: 'cancelled' } } },
       { $group: { _id: null, total: { $sum: '$total' }, paid: { $sum: '$paidAmount' }, balance: { $sum: '$balance' }, count: { $sum: 1 } } },
     ]),
     Payment.aggregate([
-      { $match: { type: 'supplier_payment', party: supplierId } },
+      { $match: { ...tenantFilter, type: 'supplier_payment', party: supplierId } },
       { $group: { _id: null, amount: { $sum: '$amount' }, count: { $sum: 1 } } },
     ]),
   ]);
@@ -70,15 +70,16 @@ export async function supplierBalance(supplierId) {
 }
 
 /** Batch version for list screens (avoids N+1 queries). */
-export async function customerBalances(customerIds) {
+export async function customerBalances(customerIds, tenantId) {
   if (!customerIds.length) return new Map();
+  const tenantFilter = { tenantId };
   const [sales, receipts] = await Promise.all([
     Sale.aggregate([
-      { $match: { customer: { $in: customerIds }, status: { $in: ['completed', 'partial_return'] } } },
+      { $match: { ...tenantFilter, customer: { $in: customerIds }, status: { $in: ['completed', 'partial_return'] } } },
       { $group: { _id: '$customer', balance: { $sum: '$balance' }, total: { $sum: '$total' }, profit: { $sum: '$grossProfit' }, count: { $sum: 1 } } },
     ]),
     Payment.aggregate([
-      { $match: { type: 'customer_receipt', party: { $in: customerIds } } },
+      { $match: { ...tenantFilter, type: 'customer_receipt', party: { $in: customerIds } } },
       { $group: { _id: '$party', amount: { $sum: '$amount' } } },
     ]),
   ]);
@@ -106,15 +107,16 @@ export async function customerBalances(customerIds) {
   return map;
 }
 
-export async function supplierBalances(supplierIds) {
+export async function supplierBalances(supplierIds, tenantId) {
   if (!supplierIds.length) return new Map();
+  const tenantFilter = { tenantId };
   const [purchases, payments] = await Promise.all([
     Purchase.aggregate([
-      { $match: { supplier: { $in: supplierIds }, status: { $ne: 'cancelled' } } },
+      { $match: { ...tenantFilter, supplier: { $in: supplierIds }, status: { $ne: 'cancelled' } } },
       { $group: { _id: '$supplier', balance: { $sum: '$balance' }, total: { $sum: '$total' }, count: { $sum: 1 } } },
     ]),
     Payment.aggregate([
-      { $match: { type: 'supplier_payment', party: { $in: supplierIds } } },
+      { $match: { ...tenantFilter, type: 'supplier_payment', party: { $in: supplierIds } } },
       { $group: { _id: '$party', amount: { $sum: '$amount' } } },
     ]),
   ]);

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { body } from 'express-validator';
 import { User, ROLES, ROLE_LABELS } from '../models/User.js';
 import { Branch } from '../models/Branch.js';
+import { Tenant } from '../models/Tenant.js';
 import { signToken, requireAuth } from '../middleware/auth.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
@@ -40,9 +41,24 @@ router.post(
     if (count > 0) throw ApiError.conflict('Setup has already been completed', 'ALREADY_SETUP');
 
     const { name, email, password, businessName } = req.body;
-    const user = await User.create({ name, email, password, role: 'owner', active: true });
+    const emailDomain = String(email).split('@')[1] || 'buildstock.local';
+    const subdomain = emailDomain.replace(/[^a-z0-9-]/g, '-').toLowerCase();
 
-    let branch = await Branch.findOne({ isDefault: true });
+    const tenant = await Tenant.create({
+      name: businessName || `${name}'s Business`,
+      nameAm: businessName || `${name}'s Business`,
+      subdomain,
+      status: 'active',
+      active: true,
+      currency: 'ETB',
+      currencySymbol: 'ETB',
+      locale: 'en',
+      timezone: 'Africa/Addis_Ababa',
+    });
+
+    const user = await User.create({ name, email, password, role: 'owner', active: true, tenantId: tenant._id });
+
+    let branch = await Branch.findOne({ isDefault: true, tenantId: tenant._id });
     if (!branch) {
       branch = await Branch.create({
         name: 'Main Branch',
@@ -50,6 +66,7 @@ router.post(
         code: 'MAIN',
         isDefault: true,
         active: true,
+        tenantId: tenant._id,
       });
       user.branch = branch._id;
       await user.save();
@@ -57,7 +74,11 @@ router.post(
 
     if (businessName) {
       const { Settings } = await import('../models/Settings.js');
-      await Settings.updateOne({ businessId: 'default' }, { $set: { businessName } }, { upsert: true });
+      await Settings.updateOne(
+        { tenantId: tenant._id },
+        { $set: { businessName, tenantId: tenant._id } },
+        { upsert: true },
+      );
     }
 
     res.status(201).json({ success: true, data: { token: signToken(user), user: serialize(user) } });

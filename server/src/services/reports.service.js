@@ -13,6 +13,7 @@ import { User } from '../models/User.js';
 import { getSettings } from './settings.service.js';
 import { parseDateFilter, rangeForDays, dayRange } from '../utils/datetime.js';
 import { customerBalances, supplierBalances } from './parties.service.js';
+import { getTenantContext } from '../utils/tenantScope.js';
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const ACTIVE_SALE_STATUSES = ['completed', 'partial_return'];
@@ -450,7 +451,7 @@ export const REPORTS = {
     ],
     async run(query) {
       const customers = await Customer.find({ active: true }).sort({ name: 1 }).lean();
-      const balances = await customerBalances(customers.map((c) => c._id));
+      const balances = await customerBalances(customers.map((c) => c._id), getTenantContext());
       const rows = customers
         .map((c) => {
           const b = balances.get(String(c._id)) || {};
@@ -490,7 +491,7 @@ export const REPORTS = {
     ],
     async run(query) {
       const suppliers = await Supplier.find({ active: true }).sort({ name: 1 }).lean();
-      const balances = await supplierBalances(suppliers.map((s) => s._id));
+      const balances = await supplierBalances(suppliers.map((s) => s._id), getTenantContext());
       const rows = suppliers
         .map((s) => {
           const b = balances.get(String(s._id)) || {};
@@ -606,10 +607,10 @@ export const REPORTS = {
       const rangeFilter = await range(query);
       const [salesAgg, expenseAgg] = await Promise.all([
         Sale.aggregate([
-          { $match: { ...branchMatch(query.branch), date: rangeFilter, status: { $in: ACTIVE_SALE_STATUSES } } },
+          { $match: { ...branchMatch(query.branch), tenantId: getTenantContext(), date: rangeFilter, status: { $in: ACTIVE_SALE_STATUSES } } },
           { $group: { _id: null, revenue: { $sum: '$subtotal' }, discounts: { $sum: '$discountTotal' }, cogs: { $sum: '$costTotal' }, profit: { $sum: '$grossProfit' }, collected: { $sum: '$paidAmount' }, receivable: { $sum: '$balance' } } },
         ]),
-        Expense.aggregate([{ $match: { ...branchMatch(query.branch), date: rangeFilter } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+        Expense.aggregate([{ $match: { ...branchMatch(query.branch), tenantId: getTenantContext(), date: rangeFilter } }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       ]);
       const s = salesAgg[0] || { revenue: 0, discounts: 0, cogs: 0, profit: 0, collected: 0, receivable: 0 };
       const e = expenseAgg[0]?.total || 0;
@@ -699,15 +700,15 @@ export const REPORTS = {
       const [users, sales, movements, expenses] = await Promise.all([
         User.find({ active: true }).populate('branch', 'name').lean(),
         Sale.aggregate([
-          { $match: { ...branchMatch(query.branch), date: rangeFilter, status: { $in: ACTIVE_SALE_STATUSES } } },
+          { $match: { ...branchMatch(query.branch), tenantId: getTenantContext(), date: rangeFilter, status: { $in: ACTIVE_SALE_STATUSES } } },
           { $group: { _id: '$soldBy', count: { $sum: 1 }, total: { $sum: '$total' } } },
         ]),
         StockMovement.aggregate([
-          { $match: { ...branchMatch(query.branch), date: rangeFilter } },
+          { $match: { ...branchMatch(query.branch), tenantId: getTenantContext(), date: rangeFilter } },
           { $group: { _id: '$employee', ins: { $sum: { $cond: [{ $eq: ['$direction', 'in'] }, 1, 0] } }, outs: { $sum: { $cond: [{ $eq: ['$direction', 'out'] }, 1, 0] } } } },
         ]),
         Expense.aggregate([
-          { $match: { ...branchMatch(query.branch), date: rangeFilter } },
+          { $match: { ...branchMatch(query.branch), tenantId: getTenantContext(), date: rangeFilter } },
           { $group: { _id: '$employee', count: { $sum: 1 }, total: { $sum: '$amount' } } },
         ]),
       ]);

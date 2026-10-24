@@ -46,7 +46,7 @@ router.get(
     ]);
 
     const summary = await Sale.aggregate([
-      { $match: filter },
+      { $match: { ...filter, tenantId: req.tenantId } },
       {
         $group: {
           _id: null,

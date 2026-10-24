@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 /** Append-only audit trail for corrections, approvals and sensitive operations. */
 const auditLogSchema = new mongoose.Schema(
@@ -11,6 +12,7 @@ const auditLogSchema = new mongoose.Schema(
     userName: { type: String, default: '' },
     userRole: { type: String, default: '' },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     details: { type: mongoose.Schema.Types.Mixed, default: {} },
     ip: { type: String, default: '' },
     date: { type: Date, default: Date.now, index: true },
@@ -20,5 +22,8 @@ const auditLogSchema = new mongoose.Schema(
 
 auditLogSchema.index({ date: -1 });
 
+tenantScope(auditLogSchema);
+
 export const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 export default AuditLog;
+

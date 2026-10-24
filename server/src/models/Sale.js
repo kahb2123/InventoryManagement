@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const SALE_STATUSES = ['completed', 'cancelled', 'returned', 'partial_return'];
 export const PAYMENT_STATUSES = ['paid', 'partial', 'unpaid'];
@@ -28,7 +29,8 @@ const saleItemSchema = new mongoose.Schema(
 
 const saleSchema = new mongoose.Schema(
   {
-    invoiceNumber: { type: String, required: true, unique: true },
+    invoiceNumber: { type: String, required: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
     customerName: { type: String, default: 'Walk-in Customer' },
@@ -59,8 +61,12 @@ const saleSchema = new mongoose.Schema(
 );
 
 saleSchema.index({ date: -1 });
-saleSchema.index({ customer: 1, date: -1 });
-saleSchema.index({ clientKey: 1 }, { unique: true, partialFilterExpression: { clientKey: { $type: 'string' } } });
+saleSchema.index({ tenantId: 1, date: -1 });
+saleSchema.index({ tenantId: 1, customer: 1, date: -1 });
+saleSchema.index({ tenantId: 1, clientKey: 1 }, { unique: true, partialFilterExpression: { clientKey: { $type: 'string' } } });
+
+tenantScope(saleSchema);
 
 export const Sale = mongoose.model('Sale', saleSchema);
 export default Sale;
+

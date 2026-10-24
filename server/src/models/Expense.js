@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const EXPENSE_CATEGORIES = [
   'rent',
@@ -29,11 +30,15 @@ const expenseSchema = new mongoose.Schema(
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     receiptNumber: { type: String, trim: true, default: '' },
     notes: { type: String, trim: true, default: '' },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
   },
   { timestamps: true }
 );
 
 expenseSchema.index({ date: -1 });
 
+tenantScope(expenseSchema);
+
 export const Expense = mongoose.model('Expense', expenseSchema);
 export default Expense;
+

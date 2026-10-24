@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const TAX_TYPES = ['none', 'vat', 'withholding', 'custom'];
 
 const settingsSchema = new mongoose.Schema(
   {
-    // Singleton document (businessId is always the constant "default")
-    businessId: { type: String, default: 'default', unique: true, index: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
 
     businessName: { type: String, default: 'BuildStock Ethiopia', trim: true },
     businessNameAm: { type: String, default: 'ቢልድስቶክ ኢትዮጵያ', trim: true },
@@ -52,5 +52,8 @@ const settingsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+tenantScope(settingsSchema);
+
 export const Settings = mongoose.model('Settings', settingsSchema);
 export default Settings;
+

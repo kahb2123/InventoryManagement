@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { tenantScope } from '../utils/tenantScope.js';
 
 export const ROLES = ['owner', 'manager', 'sales_clerk', 'storekeeper', 'accountant'];
 
@@ -15,10 +16,11 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },
     nameAm: { type: String, trim: true, maxlength: 120, default: '' },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     phone: { type: String, trim: true, default: '' },
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ROLES, required: true, default: 'sales_clerk' },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
     active: { type: Boolean, default: true },
     mustChangePassword: { type: Boolean, default: false },
@@ -26,6 +28,8 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.index({ tenantId: 1, email: 1 }, { unique: true });
 
 userSchema.pre('save', async function hashPassword(next) {
   if (!this.isModified('password')) return next();
@@ -43,5 +47,8 @@ userSchema.methods.toPublic = function toPublic() {
   return obj;
 };
 
+tenantScope(userSchema);
+
 export const User = mongoose.model('User', userSchema);
 export default User;
+

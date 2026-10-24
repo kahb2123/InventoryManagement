@@ -148,7 +148,7 @@ export async function createSale(req, body) {
       const limit = customer.creditLimit || 0;
       if (limit > 0) {
         const { customerBalance } = await import('./parties.service.js');
-        const current = await customerBalance(customer._id);
+        const current = await customerBalance(customer._id, req.tenantId);
         if (round2(current.balance + balance) > limit) {
           throw ApiError.conflict(
             `This sale would exceed the credit limit for ${customer.name} (limit ${limit} ETB).`,

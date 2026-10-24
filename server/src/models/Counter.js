@@ -1,10 +1,16 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 /** Atomic sequence generator for human-readable document numbers. */
 const counterSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true, index: true },
+  key: { type: String, required: true, index: true },
+  tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
   seq: { type: Number, default: 0 },
 });
+
+counterSchema.index({ key: 1, tenantId: 1 }, { unique: true });
+
+tenantScope(counterSchema);
 
 export const Counter = mongoose.model('Counter', counterSchema);
 
@@ -30,3 +36,4 @@ export async function nextNumber(key, format) {
 }
 
 export default Counter;
+

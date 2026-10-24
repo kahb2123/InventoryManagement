@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { tenantScope } from '../utils/tenantScope.js';
 
 /**
  * Per-branch (per-warehouse) stock position for a product.
@@ -6,6 +7,7 @@ import mongoose from 'mongoose';
  */
 const productStockSchema = new mongoose.Schema(
   {
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
     quantity: { type: Number, default: 0 },
@@ -17,7 +19,10 @@ const productStockSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-productStockSchema.index({ product: 1, branch: 1 }, { unique: true });
+productStockSchema.index({ tenantId: 1, product: 1, branch: 1 }, { unique: true });
+
+tenantScope(productStockSchema);
 
 export const ProductStock = mongoose.model('ProductStock', productStockSchema);
 export default ProductStock;
+

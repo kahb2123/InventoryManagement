@@ -46,7 +46,7 @@ router.get(
         .lean(),
       Payment.countDocuments(filter),
       Payment.aggregate([
-        { $match: filter },
+        { $match: { ...filter, tenantId: req.tenantId } },
         { $group: { _id: '$type', amount: { $sum: '$amount' }, count: { $sum: 1 } } },
       ]),
     ]);
