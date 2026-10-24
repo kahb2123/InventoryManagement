@@ -225,6 +225,7 @@ export function Sidebar({ open, onClose }) {
 export function Topbar({ onMenuClick }) {
   const { t } = useI18n();
   const { user, logout } = useAuth();
+  const { settings } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -273,6 +274,15 @@ export function Topbar({ onMenuClick }) {
       </div>
 
       <LanguageSwitcher />
+
+      {settings?.businessName && (
+        <div className="flex items-center gap-2 ml-4">
+          <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1.5">
+            <Building2 className="h-3.5 w-3.5 text-brand-600 shrink-0" />
+            <span className="text-[11px] font-medium text-ink truncate max-w-[140px]">{settings.businessName}</span>
+          </div>
+        </div>
+      )}
 
       <div className="relative" onClick={(e) => e.stopPropagation()}>
         <button
