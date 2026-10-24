@@ -1,0 +1,54 @@
+# Render blueprint for the BuildStock Ethiopia API.
+#
+#   render blueprint launch      (from the repo root, after pushing)
+#
+# Or create the service manually in the Render dashboard using the values
+# below. Every secret is marked "sync: false", so Render prompts for it and
+# the value is never stored in this repository.
+#
+# The Vercel frontend lives in the same repository but is deployed separately;
+# set VITE_API_URL on Vercel to this service's URL + "/api".
+
+services:
+  - type: web
+    name: buildstock-api
+    runtime: node
+    plan: free
+    region: frankfurt # same region as the MongoDB Atlas cluster
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # MongoDB Atlas connection string. Keep this secret.
+      - key: MONGO_URI
+        sync: false
+
+      # Signing key for JWTs. Must be at least 32 characters.
+      - key: JWT_SECRET
+        sync: false
+
+      # Never fall back to an in-memory database in production.
+      - key: USE_MEMORY_DB_FALLBACK
+        value: "false"
+
+      # Comma-separated list of allowed browser origins, e.g.
+      # https://buildstock.vercel.app,https://buildstock-abc.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+
+      # Only allow loopback origins during local development.
+      - key: CORS_ALLOW_LOOPBACK
+        value: "false"
+
+      # Owner account created by `npm run seed`. Change the password.
+      - key: SEED_OWNER_EMAIL
+        sync: false
+      - key: SEED_OWNER_PASSWORD
+        sync: false
+      - key: SEED_OWNER_NAME
+        value: BuildStock Owner

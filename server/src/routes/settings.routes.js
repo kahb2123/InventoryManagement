@@ -9,6 +9,7 @@ import { asyncHandler, ApiError } from '../utils/apiError.js';
 import { getSettings, updateSettings } from '../services/settings.service.js';
 import { upload } from '../middleware/upload.js';
 import { audit } from '../services/audit.service.js';
+import { absoluteMediaUrl, withAbsoluteLogo } from '../utils/media.js';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.get(
         businessName: settings.businessName,
         businessNameAm: settings.businessNameAm,
         tagline: settings.tagline,
-        logo: settings.logo,
+        logo: absoluteMediaUrl(req, settings.logo),
         currency: settings.currency,
         locale: settings.locale,
         timezone: settings.timezone,
@@ -46,7 +47,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const settings = await getSettings({ fresh: true });
     const branches = await Branch.find({ active: true }).sort({ name: 1 }).lean();
-    res.json({ success: true, data: { ...settings.toObject(), branches } });
+    res.json({ success: true, data: { ...withAbsoluteLogo(req, settings), branches } });
   })
 );
 
@@ -76,7 +77,7 @@ router.put(
     }
     const settings = await updateSettings(patch);
     await audit(req, { action: 'settings.updated', entity: 'Settings', entityLabel: settings.businessName, details: { fields: Object.keys(patch) } });
-    res.json({ success: true, message: 'Settings saved', data: settings });
+    res.json({ success: true, message: 'Settings saved', data: withAbsoluteLogo(req, settings) });
   })
 );
 
@@ -89,7 +90,7 @@ router.post(
     if (!req.file) throw ApiError.badRequest('Choose an image to upload', 'NO_FILE');
     const settings = await updateSettings({ logo: `/uploads/${req.file.filename}` });
     await audit(req, { action: 'settings.logo_updated', entity: 'Settings', entityLabel: settings.businessName });
-    res.json({ success: true, message: 'Logo updated', data: { logo: settings.logo } });
+    res.json({ success: true, message: 'Logo updated', data: { logo: absoluteMediaUrl(req, settings.logo) } });
   })
 );
 

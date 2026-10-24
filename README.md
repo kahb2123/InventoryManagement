@@ -31,6 +31,119 @@ excluded by `.gitignore` — never commit real credentials or user uploads.
 
 ---
 
+## Deployment
+
+The API runs on **Render** and the client on **Vercel**. Both read from this
+same repository — Vercel uses the `client/` folder, Render uses `server/`.
+
+```
+Vercel  ──HTTPS──▶  Render (API)  ──TLS──▶  MongoDB Atlas
+  client/                server/                buildstock_ethiopia
+```
+
+### 1. Prepare MongoDB Atlas
+
+Render's outbound IP addresses change between deploys, so Atlas cannot use a
+fixed allow-list entry.
+
+1. Atlas → **Network Access** → **Allow access from anywhere** (`0.0.0.0/0`),
+   or add Render's published static IP range if you are on a paid instance
+   with a static outbound IP.
+2. **Database Access** → your user → ensure it has **Read and write** on the
+   `buildstock_ethiopia` database.
+3. Keep the password out of git — it only ever goes into Render's environment.
+
+### 2. Deploy the API on Render
+
+**Via blueprint (recommended):** after pushing this repo, run
+`render blueprint launch` and fill in the prompted secrets.
+
+**Via dashboard:** *New → Web Service → Connect repo → set:*
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | `server` |
+| Runtime | Node |
+| Build Command | `npm ci --omit=dev` |
+| Start Command | `npm start` |
+| Health Check Path | `/api/health` |
+| Region | Frankfurt (same as your Atlas cluster) |
+
+Environment variables:
+
+| Key | Value |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `MONGO_URI` | your Atlas connection string (secret) |
+| `JWT_SECRET` | random string, **32+ characters** (secret) |
+| `USE_MEMORY_DB_FALLBACK` | `false` |
+| `CORS_ORIGINS` | your Vercel URL(s), comma separated — see step 3 |
+| `CORS_ALLOW_LOOPBACK` | `false` |
+| `SEED_OWNER_EMAIL` / `SEED_OWNER_PASSWORD` | the owner account to seed |
+
+Render injects `PORT` automatically and the API reads it (`server/src/index.js`).
+
+Check it with `https://<your-service>.onrender.com/api/health` — it should
+return `{"success":true,"data":{"status":"ok",...}}`.
+
+#### Seed the database
+
+The API never seeds itself. Run the seed once against the production database:
+
+```bash
+# locally, with the production MONGO_URI in server/.env
+cd server
+npm run seed -- --force
+```
+
+### 3. Deploy the client on Vercel
+
+**Via dashboard:** *Add New → Project → Import* your repo, then set:
+
+| Setting | Value |
+| --- | --- |
+| Root Directory | `client` |
+| Framework Preset | Vite |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+| Install Command | `npm ci` |
+
+Environment variables:
+
+| Key | Value |
+| --- | --- |
+| `VITE_API_URL` | `https://<your-service>.onrender.com/api` |
+
+`client/vercel.json` already contains the SPA rewrite that sends every route
+to `index.html`; without it, refreshing on `/products` would 404.
+
+> `VITE_*` variables are **inlined at build time**. After changing
+> `VITE_API_URL`, redeploy the client (Vercel → Deployments → ⋯ → Redeploy).
+
+### 4. Allow the frontend origin
+
+Set `CORS_ORIGINS` on Render to the exact Vercel URL(s), then restart the
+service:
+
+```
+CORS_ORIGINS=https://buildstock-ethiopia.vercel.app,https://buildstock-ethiopia-git-main-yourname.vercel.app
+```
+
+Vercel also gives every preview deployment its own domain, so add those too
+or the preview builds cannot call the API.
+
+### Things to know about the free tiers
+
+| Topic | Behaviour |
+| --- | --- |
+| **Render spin-down** | The free instance sleeps after 15 minutes idle. The first request after that can take ~50 s while it wakes. Use a paid instance, or a cron ping, for production use. |
+| **Uploads are ephemeral** | `server/uploads/` is on Render's ephemeral disk — **uploaded logos are lost on every redeploy or restart**. Attach a Render Persistent Disk and set `UPLOAD_DIR=/mnt/data/uploads`, or store files in S3/Cloudinary. |
+| **Atlas access** | `0.0.0.0/0` lets any host reach your database. The password is the only barrier. If the deployment is public-facing, consider a dedicated database user with a strong password. |
+| **Seed password** | `SEED_OWNER_PASSWORD` in `server/.env.example` is a known default. Change it and change the account password before going live. |
+
+
+---
+
 ## Quick start
 
 Two terminals.

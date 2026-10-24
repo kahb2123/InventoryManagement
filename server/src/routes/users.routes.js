@@ -71,12 +71,20 @@ router.post(
 router.patch(
   '/:id',
   requirePermission('users.manage'),
+  body('email').optional().isEmail().withMessage('Enter a valid email address'),
   validate,
   asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) throw ApiError.notFound('User not found');
 
-    const { name, nameAm, phone, role, active, branch, password, mustChangePassword } = req.body;
+    const { name, nameAm, email, phone, role, active, branch, password, mustChangePassword } = req.body;
+
+    if (email !== undefined) {
+      const normalized = String(email).toLowerCase();
+      const existing = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+      if (existing) throw ApiError.conflict('A user with this email already exists', 'DUPLICATE_EMAIL');
+      user.email = normalized;
+    }
 
     if (role !== undefined) {
       if (!ROLES.includes(role)) throw ApiError.badRequest('Invalid role', 'INVALID_ROLE');
