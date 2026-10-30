@@ -24,12 +24,23 @@ import Users from './pages/Users.jsx';
 import Settings from './pages/Settings.jsx';
 import Audit from './pages/Audit.jsx';
 
+import PlatformDashboard from './pages/platform/PlatformDashboard.jsx';
+import TenantsList from './pages/platform/TenantsList.jsx';
+import TenantCreate from './pages/platform/TenantCreate.jsx';
+import TenantDetails from './pages/platform/TenantDetails.jsx';
+
 function Protected({ children }) {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return <LoadingBlock className="min-h-screen bg-canvas" />;
   if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />;
+  return <AppShell>{children}</AppShell>;
+}
+
+function GuardedPlatform({ children }) {
+  const { user } = useAuth();
+  if (!user?.isPlatformAdmin) return null;
   return <AppShell>{children}</AppShell>;
 }
 
@@ -202,6 +213,39 @@ export default function App() {
               <Audit />
             </Guarded>
           </Protected>
+        }
+      />
+
+      <Route
+        path="/platform"
+        element={
+          <GuardedPlatform>
+            <PlatformDashboard />
+          </GuardedPlatform>
+        }
+      />
+      <Route
+        path="/platform/tenants"
+        element={
+          <GuardedPlatform>
+            <TenantsList />
+          </GuardedPlatform>
+        }
+      />
+      <Route
+        path="/platform/tenants/new"
+        element={
+          <GuardedPlatform>
+            <TenantCreate />
+          </GuardedPlatform>
+        }
+      />
+      <Route
+        path="/platform/tenants/:id"
+        element={
+          <GuardedPlatform>
+            <TenantDetails />
+          </GuardedPlatform>
         }
       />
 

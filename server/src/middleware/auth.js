@@ -26,6 +26,11 @@ export async function authenticate(req, res, next) {
   req.user = user;
   req.userId = user._id;
   req.userRole = user.role;
+  if (user.isPlatformAdmin) {
+    req.isPlatformAdmin = true;
+    // Platform admins are not scoped to a specific tenant
+    return next();
+  }
   req.tenantId = user.tenantId;
   setTenantContext(user.tenantId);
   return next();
@@ -33,7 +38,7 @@ export async function authenticate(req, res, next) {
 
 export function signToken(user) {
   return jwt.sign(
-    { sub: user._id.toString(), role: user.role, name: user.name, tenantId: user.tenantId.toString() },
+    { sub: user._id.toString(), role: user.role, name: user.name, tenantId: user.tenantId ? user.tenantId.toString() : null, isPlatformAdmin: !!user.isPlatformAdmin },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn }
   );
@@ -41,3 +46,5 @@ export function signToken(user) {
 
 export const requireAuth = asyncHandler(authenticate);
 export default authenticate;
+
+

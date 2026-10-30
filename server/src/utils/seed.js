@@ -196,6 +196,21 @@ export async function seedDatabase({ force = false } = {}) {
     { key: 'storekeeper', name: 'Mekdes Haile', email: 'storekeeper@buildstock.et', password: 'BuildStock@2024', role: 'storekeeper' },
     { key: 'accountant', name: 'Kalkidan Ayele', email: 'accountant@buildstock.et', password: 'BuildStock@2024', role: 'accountant' },
   ];
+
+  // Create platform admin if not exists
+  let platformAdmin = await User.findOne({ email: 'admin@buildstock.et' });
+  if (!platformAdmin) {
+    platformAdmin = await User.create({
+      name: 'Platform Administrator',
+      email: 'admin@buildstock.et',
+      password: 'Admin@123456',
+      role: 'owner',
+      isPlatformAdmin: true,
+      tenantId: null,
+      active: true,
+    });
+    console.log('[seed] Created platform admin: admin@buildstock.et / Admin@123456');
+  }
   for (const def of userDefs) {
     let user = await User.findOne({ email: def.email });
     if (!user) {
@@ -397,3 +412,4 @@ export async function seedDatabase({ force = false } = {}) {
   );
   return { tenantId: tenant._id };
 }
+

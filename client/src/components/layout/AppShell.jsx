@@ -144,6 +144,13 @@ export function Sidebar({ open, onClose }) {
     return can('reports.view');
   });
 
+  const platformAdminItems = user?.isPlatformAdmin
+    ? [
+        { key: 'platform', to: '/platform', icon: ShieldCheck, label: 'Platform Admin' },
+        { key: 'platform-tenants', to: '/platform/tenants', icon: Building2, label: 'Tenants' },
+      ]
+    : [];
+
   const adminItems = [
     { key: 'branches', to: '/branches', icon: Building2, label: 'nav.branches' },
     { key: 'users', to: '/users', icon: UserCog, label: 'nav.users' },
@@ -211,6 +218,7 @@ export function Sidebar({ open, onClose }) {
           ) : null}
           {tradeItems.length ? <NavSection label={t('nav.sales')} items={tradeItems} onNavigate={onClose} /> : null}
           {financeItems.length ? <NavSection label={t('nav.finance')} items={financeItems} onNavigate={onClose} /> : null}
+          {platformAdminItems.length ? <NavSection label="Platform" items={platformAdminItems} onNavigate={onClose} /> : null}
           {adminItems.length ? <NavSection label={t('nav.administration')} items={adminItems} onNavigate={onClose} /> : null}
         </nav>
 

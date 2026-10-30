@@ -2,10 +2,11 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { tenantScope } from '../utils/tenantScope.js';
 
-export const ROLES = ['owner', 'manager', 'sales_clerk', 'storekeeper', 'accountant'];
+export const ROLES = ['owner', 'admin', 'manager', 'sales_clerk', 'storekeeper', 'accountant'];
 
 export const ROLE_LABELS = {
   owner: 'Owner / Administrator',
+  admin: 'App Administrator',
   manager: 'Manager',
   sales_clerk: 'Sales Clerk',
   storekeeper: 'Storekeeper',
@@ -20,16 +21,19 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true, default: '' },
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ROLES, required: true, default: 'sales_clerk' },
-    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true },
+    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true, default: null },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
     active: { type: Boolean, default: true },
+    isPlatformAdmin: { type: Boolean, default: false, index: true },
+    isPlatformAdmin: { type: Boolean, default: false, index: true },
     mustChangePassword: { type: Boolean, default: false },
     lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
-userSchema.index({ tenantId: 1, email: 1 }, { unique: true });
+userSchema.index({ tenantId: 1, email: 1 }, { unique: true, partialFilterExpression: { tenantId: { $exists: true, $ne: null } } });
+userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { isPlatformAdmin: true } });
 
 userSchema.pre('save', async function hashPassword(next) {
   if (!this.isModified('password')) return next();
@@ -51,4 +55,17 @@ tenantScope(userSchema);
 
 export const User = mongoose.model('User', userSchema);
 export default User;
+
+
+// Add platform admin support
+userSchema.add({
+  isPlatformAdmin: { type: Boolean, default: false, index: true },
+});
+
+// Make tenantId not required for platform admins
+userSchema.path('tenantId').required(function() {
+  return !this.isPlatformAdmin;
+});
+
+
 

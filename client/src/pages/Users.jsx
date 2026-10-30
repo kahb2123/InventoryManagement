@@ -13,6 +13,7 @@ import { Modal, ConfirmDialog } from '../components/ui/Overlay.jsx';
 
 const ROLE_KEYS = {
   owner: 'users.owner',
+  admin: 'users.admin',
   manager: 'users.manager',
   sales_clerk: 'users.salesClerk',
   storekeeper: 'users.storekeeper',
@@ -21,6 +22,7 @@ const ROLE_KEYS = {
 
 const ROLE_DESC_KEYS = {
   owner: 'users.roleOwner',
+  admin: 'users.roleAdmin',
   manager: 'users.roleManager',
   sales_clerk: 'users.roleSalesClerk',
   storekeeper: 'users.roleStorekeeper',

@@ -34,7 +34,7 @@ export function requireRole(...roles) {
  * Admins may pass ?branch=<id> or ?all=1 to widen the scope.
  */
 export function branchScope(req) {
-  const isAdmin = ['owner', 'manager'].includes(req.user.role);
+  const isAdmin = ['owner', 'admin', 'manager'].includes(req.user.role);
   const requested = req.query.branch || req.body?.branch;
   if (requested && requested !== 'all') return requested;
   if (!isAdmin) return req.user.branch || null;

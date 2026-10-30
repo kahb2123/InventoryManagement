@@ -217,7 +217,7 @@ async function main() {
   expectOk('GET /audit', await call('GET', '/audit?limit=5'), (b) => Array.isArray(b?.data) && b.meta.total > 0);
 
   // ---------------------------------------------------------------- users
-  expectOk('GET /users/roles', await call('GET', '/users/roles'), (b) => Array.isArray(b?.data) && b.data.length === 5);
+  expectOk('GET /users/roles', await call('GET', '/users/roles'), (b) => Array.isArray(b?.data) && b.data.length === 6);
   expectOk('GET /users', await call('GET', '/users'), (b) => Array.isArray(b?.data));
 
   const newUser = await call('POST', '/users', {
