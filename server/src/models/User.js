@@ -21,10 +21,17 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true, default: '' },
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ROLES, required: true, default: 'sales_clerk' },
-    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant', index: true, default: null },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      index: true,
+      default: null,
+      required: function tenantRequired() {
+        return !this.isPlatformAdmin;
+      },
+    },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
     active: { type: Boolean, default: true },
-    isPlatformAdmin: { type: Boolean, default: false, index: true },
     isPlatformAdmin: { type: Boolean, default: false, index: true },
     mustChangePassword: { type: Boolean, default: false },
     lastLoginAt: { type: Date, default: null },
@@ -32,7 +39,10 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSchema.index({ tenantId: 1, email: 1 }, { unique: true, partialFilterExpression: { tenantId: { $exists: true, $ne: null } } });
+userSchema.index(
+  { tenantId: 1, email: 1 },
+  { unique: true, partialFilterExpression: { tenantId: { $exists: true, $type: 'objectId' } } }
+);
 userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { isPlatformAdmin: true } });
 
 userSchema.pre('save', async function hashPassword(next) {
@@ -55,17 +65,5 @@ tenantScope(userSchema);
 
 export const User = mongoose.model('User', userSchema);
 export default User;
-
-
-// Add platform admin support
-userSchema.add({
-  isPlatformAdmin: { type: Boolean, default: false, index: true },
-});
-
-// Make tenantId not required for platform admins
-userSchema.path('tenantId').required(function() {
-  return !this.isPlatformAdmin;
-});
-
 
 

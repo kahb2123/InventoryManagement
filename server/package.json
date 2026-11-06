@@ -10,6 +10,7 @@
     "dev:seeded": "node src/index.js --seed --force",
     "start": "node src/index.js",
     "seed": "node src/utils/seed.js",
+    "ensure-platform-admin": "node src/scripts/ensurePlatformAdmin.js",
     "smoke": "node scripts/smoke.js",
     "smoke:cors": "node scripts/cors-check.js"
   },
