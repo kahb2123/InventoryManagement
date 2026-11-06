@@ -25,7 +25,6 @@ import settingsRoutes from './routes/settings.routes.js';
 import auditRoutes from './routes/audit.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import platformRoutes from './routes/platform.routes.js';
-import permissionsRoutes from './routes/permissions.routes.js';
 
 import { notFound, errorHandler } from './middleware/error.js';
 import { uploadDir } from './middleware/upload.js';
@@ -101,7 +100,6 @@ export function createApp() {
   app.use('/api/audit', auditRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/platform', platformRoutes);
-  app.use('/api/permissions', permissionsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);
