@@ -39,8 +39,11 @@ function Protected({ children }) {
 }
 
 function GuardedPlatform({ children }) {
-  const { user } = useAuth();
-  if (!user?.isPlatformAdmin) return null;
+  const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
+  if (loading) return <LoadingBlock className="min-h-screen bg-canvas" />;
+  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (!user?.isPlatformAdmin) return <Navigate to="/" replace />;
   return <AppShell>{children}</AppShell>;
 }
 
